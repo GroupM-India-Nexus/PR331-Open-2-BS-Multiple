@@ -27,14 +27,21 @@ def is_base64_encoded(data):
 @app.route('/process_excelfile', methods=['POST'])
 def process_excelfile():
   try:
-      # Parse and log the incoming JSON bodys
+      # Parse and log the incoming JSON body
       body = request.get_json()
       if VERBOSE_LOGGING:
           logger.debug("Request JSON body: %s", body)
 
-      files = body.get("files")  # Expecting a list of files
-      if not files or not isinstance(files, list):
-          msg = "Missing or invalid 'files' key in the request body"
+      # Check if the request contains a single file or multiple files
+      if "files" in body and isinstance(body["files"], list):
+          # Multiple files format
+          files = body["files"]
+      else:
+          # Single file format - convert to list format for consistent processing
+          files = [body]
+
+      if not files:
+          msg = "No files to process"
           logger.error(msg)
           return jsonify({"error": msg}), 400
 
@@ -90,18 +97,25 @@ def process_excelfile():
                   "status": "error",
                   "message": "Header validation failed",
                   "details": issues
-              }), 250
+              })
               continue
 
           # Process the file
           try:
-            #   output_file_path = process_tv_commercial_data(input_path, data_folder)
-              output_file = os.path.join(data_folder, f"Output_{os.path.basename(input_path)}")
-              output_file_path = process_tv_commercial_data(input_path, output_file)
-              logger.info(f"File '{filename}' processed successfully. Output saved to {output_file_path}")
+              # Create the output file path
+              output_file = os.path.join(data_folder, f"Output_{filename}")
+              
+              # Process the file - make sure mbs.py is updated to use this path
+              process_tv_commercial_data(input_path, output_file)
+              
+              # Verify the output file exists
+              if not os.path.exists(output_file):
+                  raise FileNotFoundError(f"Output file not created: {output_file}")
+              
+              logger.info(f"File '{filename}' processed successfully. Output saved to {output_file}")
 
               # Read the processed file and encode it to Base64
-              with open(output_file_path, "rb") as f:
+              with open(output_file, "rb") as f:
                   output_data = f.read()
               encoded_output = base64.b64encode(output_data).decode('utf-8')
 
@@ -110,7 +124,7 @@ def process_excelfile():
                   "filename": filename,
                   "status": "success",
                   "data": encoded_output,
-                  "output_filename": os.path.basename(output_file_path)
+                  "output_filename": os.path.basename(output_file)
               })
 
           except Exception as e:
