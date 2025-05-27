@@ -25,7 +25,7 @@ def is_base64_encoded(data):
       return False
 
 @app.route('/process_excelfile', methods=['POST'])
-def process_excel():
+def process_excelfile():
   try:
       # Parse and log the incoming JSON bodys
       body = request.get_json()
@@ -90,7 +90,7 @@ def process_excel():
                   "status": "error",
                   "message": "Header validation failed",
                   "details": issues
-              })
+              }), 250
               continue
 
           # Process the file
@@ -99,7 +99,7 @@ def process_excel():
               output_file = os.path.join(data_folder, f"Output_{os.path.basename(input_path)}")
               output_file_path = process_tv_commercial_data(input_path, output_file)
               logger.info(f"File '{filename}' processed successfully. Output saved to {output_file_path}")
-                
+
               # Read the processed file and encode it to Base64
               with open(output_file_path, "rb") as f:
                   output_data = f.read()

@@ -1,0 +1,18 @@
+# Web framework and server
+Flask==2.0.1
+gunicorn==20.1.0
+Werkzeug==2.0.1
+
+# Excel processing
+openpyxl==3.0.9
+
+# For Cloud Storage integration (optional)
+google-cloud-storage==2.7.0
+
+# Logging and monitoring (optional but recommended)
+opencensus-ext-flask==0.7.3
+opencensus-ext-logging==0.1.0 
+
+# For development and testing
+pytest==7.0.0
+flake8==4.0.1
