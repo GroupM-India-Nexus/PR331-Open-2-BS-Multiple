@@ -155,7 +155,7 @@ def process_tv_commercial_data(input_file, output_file):
     col_widths = {}
     
     # Define the range (P1 to BI17)
-    start_col, end_col = 16, 61  # Column P (16) to BI (60)
+    start_col, end_col = 16, 15 + len(campaign_names) -1  # Column P (16) to BI (60)
     start_row, end_row = 1, 21
     
     # Define the range (P1 to BI17) 
@@ -248,7 +248,7 @@ def process_tv_commercial_data(input_file, output_file):
         cell.font = bold_font
 
     # Write headers at row 19 with light orange color till 'BK'
-    for col_num in range(16, 64):  # Columns A to BK (total 63 columns)
+    for col_num in range(16, 15 + len(campaign_names) - 1):  # Columns A to BK (total 63 columns)
         cell = out_worksheet.cell(row=23, column=col_num) # 19 to 22 changed
         cell.fill = light_orange_fill
         cell.font = bold_font    
@@ -320,7 +320,7 @@ def process_tv_commercial_data(input_file, output_file):
             
     # Define the range to fill (P6 to BI6)
     start_col = 16  # Column P
-    end_col = 60    # Column BI
+    end_col = 15 + len(campaign_names) - 1    # Column BI
     row = 6         # Row 6
     
     # Apply the formula dynamically for each column
@@ -333,7 +333,7 @@ def process_tv_commercial_data(input_file, output_file):
     
     # Define the range to fill (P7 to BI7)
     start_col = 16 #column P
-    end_col = 60 # Column BI
+    end_col = 15 + len(campaign_names) - 1  # Column BI
     row = 7
     
     # Apply the formula dynamically for each column
@@ -380,7 +380,7 @@ def process_tv_commercial_data(input_file, output_file):
                               
     # Calculate and populate values under 'Allocated' (M20 to M32)
     for row_idx in range(24, 55):  # Rows 20 to 32
-        spot_values_row = [out_worksheet.cell(row=row_idx, column=col_idx).value or 0 for col_idx in range(16, 64)]  # P to BI
+        spot_values_row = [out_worksheet.cell(row=row_idx, column=col_idx).value or 0 for col_idx in range(16, 15 + len(campaign_names) - 1)]  # P to BI
         allocated_value = sum(
             (dur_value or 0) * (spot_value or 0)
             for dur_value, spot_value in zip(dur_values, spot_values_row)
@@ -398,11 +398,15 @@ def process_tv_commercial_data(input_file, output_file):
     out_worksheet["P23"] = "Spots" 
     out_worksheet["P23"].alignment = Alignment(horizontal="center", vertical="center")    
     
+    total_grp_col = 16 + len(campaign_names) # Dynamically calculate the end column
+    total_cost_col = total_grp_col + 1
+
+    
     # Write 'TOTAL GRP' in BJ19 and 'TOTAL COST' in BK19
-    out_worksheet.cell(row=23, column=62, value='TOTAL GRP').fill = light_orange_fill
-    out_worksheet.cell(row=23, column=62).font = bold_font
-    out_worksheet.cell(row=23, column=63, value='TOTAL COST').fill = light_orange_fill
-    out_worksheet.cell(row=23, column=63).font = bold_font
+    out_worksheet.cell(row=23, column=total_grp_col, value='TOTAL GRP').fill = light_orange_fill
+    out_worksheet.cell(row=23, column=total_grp_col).font = bold_font
+    out_worksheet.cell(row=23, column=total_cost_col, value='TOTAL COST').fill = light_orange_fill
+    out_worksheet.cell(row=23, column=total_cost_col).font = bold_font
 
     
     for row in range(3, 7):  # K3 to M6
@@ -452,7 +456,7 @@ def process_tv_commercial_data(input_file, output_file):
     light_purple_fill = PatternFill(start_color="E6CCFF", end_color="E6CCFF", fill_type="solid")
 
 # Apply the fill to the range P12:BI12
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column
         cell = out_worksheet.cell(row=12, column=col_idx)
         cell.fill = light_purple_fill      
              
@@ -463,29 +467,24 @@ def process_tv_commercial_data(input_file, output_file):
     # Calculate and populate TOTAL GRP using formula
     for row_idx in range(24, 55): 
         formula = f"=ROUND(E{row_idx}*K{row_idx}/10, 0)"    
-        out_worksheet.cell(row=row_idx, column=62, value=formula)
+        out_worksheet.cell(row=row_idx, column=total_grp_col, value=formula)
 
     # Calculate and populate TOTAL COST using formula
     for row_idx in range(24, 55):  # Rows 20 to 32 # 20 to 23 changed
         formula_cost = f"=ROUND(F{row_idx}*K{row_idx}/1000000, 0)"
-        out_worksheet.cell(row=row_idx, column=63, value=formula_cost)  # BK column (63rd)
+        out_worksheet.cell(row=row_idx, column=total_cost_col, value=formula_cost)  # BK column (63rd)
 
-    # Add SUM formula for TOTAL GRP in BJ18
-    out_worksheet.cell(row=18, column=62, value="=SUM(BJ20:BJ9530)")  # BJ18
-    out_worksheet.cell(row=18, column=62).font = bold_font
-
-    # Store the SUM formula for TOTAL COST in BK18
-    out_worksheet.cell(row=18, column=63, value="=SUM(BK20:BK9530)")
-    out_worksheet.cell(row=18, column=63).font = bold_font
+    
 
     # Calculate the formula (BK18 / BJ18) * 100000 and store in BL18
-    out_worksheet.cell(row=18, column=64, value="=(BK18/BJ18)*100000")
-    out_worksheet.cell(row=18, column=64).font = bold_font  # BL18
+    bl_col = total_cost_col + 1
+    out_worksheet.cell(row=18, column=bl_col, value= f"=IFERROR(( {get_column_letter(total_cost_col)}18 / {get_column_letter(total_grp_col)}18 ) * 100000, 0)")
+    out_worksheet.cell(row=18, column=bl_col).font = bold_font  # BL18
 
     # Apply light yellow color to BJ18, BK18, BL18
-    out_worksheet.cell(row=18, column=62).fill = light_yellow_fill  # BJ18
-    out_worksheet.cell(row=18, column=63).fill = light_yellow_fill  # BK18
-    out_worksheet.cell(row=18, column=64).fill = light_yellow_fill  # BL18
+    out_worksheet.cell(row=18, column=total_grp_col).fill = light_yellow_fill  # BJ18
+    out_worksheet.cell(row=18, column=total_grp_col).fill = light_yellow_fill  # BK18
+    out_worksheet.cell(row=18, column=bl_col).fill = light_yellow_fill  # BL18
 
     
     
@@ -515,64 +514,85 @@ def process_tv_commercial_data(input_file, output_file):
         out_worksheet.cell(row=5, column=col_idx, value=value).font = bold_font
             
     # Apply SUMPRODUCT formula in P9 to BI9
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"=ROUND(SUMPRODUCT({col_letter}24:{col_letter}9530,$F$24:$F$9530)*{col_letter}$1/10, 0)"
         out_worksheet.cell(row=9, column=col_idx, value=formula).font = bold_font
         
     # Compute and write SUMPRODUCT formula in P10 to BI10
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"=ROUND(SUMPRODUCT({col_letter}24:{col_letter}9530,$E$24:$E$9530)*{col_letter}$1/10, 0)"
         out_worksheet.cell(row=10, column=col_idx, value=formula).font = bold_font    
 
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f'=IFERROR(ROUND({col_letter}9/{col_letter}10, 0), 0)'
         out_worksheet.cell(row=11, column=col_idx, value=formula).font = bold_font
         
-    for col_idx in range(16, 62): #P is 16th column, BI is 62nd column
+    for col_idx in range(16, end_col + 1): #P is 16th column, BI is 62nd column
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"=IFERROR(ROUND({col_letter}10/{col_letter}5*100, 0), 0)"
         out_worksheet.cell(row=12, column=col_idx, value=formula).font = bold_font
         
-    for col_idx in range(16, 62):
+    for col_idx in range(16, end_col + 1):
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"={col_letter}4-{col_letter}9"
         out_worksheet.cell(row=13, column=col_idx, value=formula).font = bold_font
         
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column # For Total Dur in row 18
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column # For Total Dur in row 18
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"=18*{col_letter}1"
         out_worksheet.cell(row=18, column=col_idx, value=formula).font = bold_font
         
-    for col_idx in range(16, 62):  # P is 16th column, BI is 62nd column # For Variance GRP in row 19
+    for col_idx in range(16, end_col + 1):  # P is 16th column, BI is 62nd column # For Variance GRP in row 19
         col_letter = out_worksheet.cell(row=1, column=col_idx).column_letter
         formula = f"={col_letter}10-{col_letter}24"
         out_worksheet.cell(row=19, column=col_idx, value=formula).font = bold_font           
-        
+    
+    
+    # Calculate the column index for the "TOTAL GRP" column
+    total_grp_col_index = 16 + len(campaign_names)    
+    
+    # Convert the column index to a column letter
+    total_grp_col_letter = get_column_letter(total_grp_col_index)    
+
+    # Add SUM formula for TOTAL GRP in BJ18
+    out_worksheet.cell(row=18, column=total_grp_col, value= f"=SUM({total_grp_col_letter}24:{total_grp_col_letter}55)")  # BJ18
+    out_worksheet.cell(row=18, column=total_grp_col).font = bold_font
+
+    # Store the SUM formula for TOTAL COST in BK18
+    out_worksheet.cell(row=18, column=total_cost_col, value= f"=SUM({get_column_letter(total_cost_col)}24:{get_column_letter(total_cost_col)}55)")
+    out_worksheet.cell(row=18, column=total_cost_col).font = bold_font
+    out_worksheet.cell(row=18, column=total_cost_col).fill = light_yellow_fill    
+                
     # Insert SUM formula in BJ4
-    out_worksheet["BJ4"] = "=ROUND(SUM(P4:BI4), 0)"
-    out_worksheet["BJ4"].fill = light_yellow_fill
+    out_worksheet[f"{total_grp_col_letter}4"] = f"=ROUND(SUM(P4:{get_column_letter(end_col)}4), 0)"
+    out_worksheet[f"{total_grp_col_letter}4"].fill = light_yellow_fill
     
     # Insert SUM formula in BJ5
-    out_worksheet["BJ5"] = "=ROUND(SUM(P5:BI5), 0)"
-    out_worksheet["BJ5"].fill = light_yellow_fill
+    out_worksheet[f"{total_grp_col_letter}5"] = f"=ROUND(SUM(P5:{get_column_letter(end_col)}5), 0)"
+    out_worksheet[f"{total_grp_col_letter}5"].fill = light_yellow_fill
     
     # Insert SUM formula in BJ9
-    out_worksheet["BJ9"] = "=ROUND(SUM(P9:BI9), 0)"
-    out_worksheet["BJ9"].fill = light_yellow_fill
+    out_worksheet[f"{total_grp_col_letter}9"] = f"=ROUND(SUM(P9:{get_column_letter(end_col)}9), 0)"
+    out_worksheet[f"{total_grp_col_letter}9"].fill = light_yellow_fill
     
     # Insert SUM formula in BJ10
-    out_worksheet["BJ10"] = "=ROUND(SUM(P10:BI10), 0)"
-    out_worksheet["BJ10"].fill = light_yellow_fill
+    out_worksheet[f"{total_grp_col_letter}10"] = f"=ROUND(SUM(P10:{get_column_letter(end_col)}10), 0)"
+    out_worksheet[f"{total_grp_col_letter}10"].fill = light_yellow_fill
     
-    out_worksheet["BL17"] = "=ROUND((BJ18/BJ5)*100, 0)"
-    out_worksheet["BL17"].fill = light_yellow_fill
+    # Calculate the column index for BL
+    bl_col_index = total_grp_col_index + 2
+    bl_col_letter = get_column_letter(bl_col_index)
+
     
-    out_worksheet["C10"] = out_worksheet["BL17"].value
+    out_worksheet[f"{bl_col_letter}17"] = f"=ROUND(({total_grp_col_letter}18/{total_grp_col_letter}5)*100, 0)"
+    out_worksheet[f"{bl_col_letter}17"].fill = light_yellow_fill
+    
+    out_worksheet["C10"] = out_worksheet[f"{bl_col_letter}17"].value
     out_worksheet["C10"].font = bold_font
-    out_worksheet["C11"] = out_worksheet["BL18"].value
+    out_worksheet["C11"] = out_worksheet[f"{total_grp_col_letter}18"].value
     out_worksheet["C11"].font = bold_font
     
     # Save output file

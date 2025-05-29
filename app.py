@@ -24,7 +24,7 @@ def is_base64_encoded(data):
   except Exception:
       return False
 
-@app.route('/process_excelfile', methods=['POST'])
+@app.route('/process_multi_excelfile', methods=['POST'])
 def process_excelfile():
   try:
       # Parse and log the incoming JSON body
